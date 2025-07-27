@@ -40,6 +40,128 @@ final case class GameState(
     GameState.fromList(nextFish, cols, rows, cellSize)
   }
 
+  /** Alternative optimized version that works directly with grid indices */
+  def nextOptimized(): GameState = {
+    import scala.util.Random
+    
+    val rand = new Random()
+    val indices = (0 until grid.size).filter(i => grid(i).nonEmpty)
+    val shuffledIndices = rand.shuffle(indices)
+    
+    var newGrid = Vector.fill(grid.size)(Option.empty[Fish])
+    val occupied = scala.collection.mutable.Set.empty[Int]
+    val seen = scala.collection.mutable.Set.empty[Int]
+    
+    for (idx <- shuffledIndices if !seen(idx)) {
+      grid(idx) match {
+        case Some(fish) =>
+          val (newFish, newOccupied) = processFishOptimized(fish, occupied.toSet, rand)
+          for (f <- newFish) {
+            val newIdx = f.y * cols + f.x
+            if (newIdx >= 0 && newIdx < newGrid.size && newGrid(newIdx).isEmpty) {
+              newGrid = newGrid.updated(newIdx, Some(f))
+              occupied += newIdx
+            }
+          }
+          seen += idx
+          newOccupied.foreach(occupied += _)
+        case None => // Should not happen since we filtered
+      }
+    }
+    
+    GameState(newGrid, cols, rows, cellSize)
+  }
+  
+  private def processFishOptimized(fish: Fish, occupied: Set[Int], rand: scala.util.Random): (List[Fish], Set[Int]) = {
+    fish match {
+      case t: Tuna => processTunaOptimized(t, occupied, rand)
+      case s: Shark => processSharkOptimized(s, occupied, rand)
+      case other => (List(other), Set(other.y * cols + other.x))
+    }
+  }
+  
+  private def processTunaOptimized(t: Tuna, occupied: Set[Int], rand: scala.util.Random): (List[Fish], Set[Int]) = {
+    val adjPositions = neighbors(t.x, t.y).map(p => p._1 + p._2 * cols)
+    val freePositions = adjPositions.filter(idx => idx >= 0 && idx < grid.size && !occupied(idx) && grid(idx).isEmpty)
+    
+    if (freePositions.nonEmpty) {
+      val newIdx = freePositions(rand.nextInt(freePositions.size))
+      val nx = newIdx % cols
+      val ny = newIdx / cols
+      val newTimer = t.breedTimer + 1
+      val currentIdx = t.y * cols + t.x
+      
+      if (newTimer >= t.tBreed) {
+        // Breed: new fish moves, old fish stays and resets timer
+        (List(
+          Tuna(nx, ny, t.tBreed, 0, t.color, t.width, t.height),
+          Tuna(t.x, t.y, t.tBreed, 0, t.color, t.width, t.height)
+        ), Set(newIdx, currentIdx))
+      } else {
+        // Move without breeding
+        (List(Tuna(nx, ny, t.tBreed, newTimer, t.color, t.width, t.height)), Set(newIdx))
+      }
+    } else {
+      // Cannot move
+      (List(t), Set(t.y * cols + t.x))
+    }
+  }
+  
+  private def processSharkOptimized(s: Shark, occupied: Set[Int], rand: scala.util.Random): (List[Fish], Set[Int]) = {
+    val adjPositions = neighbors(s.x, s.y)
+    val adjIndices = adjPositions.map(p => p._1 + p._2 * cols)
+    
+    // Look for prey (Tuna)
+    val preyIdx = adjIndices.find(idx => 
+      idx >= 0 && idx < grid.size && 
+      grid(idx).exists(_.isInstanceOf[Tuna])
+    )
+    
+    val (nx, ny, eaten) = preyIdx match {
+      case Some(idx) => 
+        val x = idx % cols
+        val y = idx / cols
+        (x, y, true)
+      case None =>
+        // Look for free space
+        val freeIndices = adjIndices.filter(idx => 
+          idx >= 0 && idx < grid.size && 
+          !occupied(idx) && grid(idx).isEmpty
+        )
+        if (freeIndices.nonEmpty) {
+          val idx = freeIndices(rand.nextInt(freeIndices.size))
+          val x = idx % cols
+          val y = idx / cols
+          (x, y, false)
+        } else {
+          (s.x, s.y, false)
+        }
+    }
+    
+    val rawE = s.sEnergy + (if (eaten) EnergyGain else -EnergyLoss)
+    val energy1 = math.min(rawE, SharkMaxEnergy)
+    val moved = (nx != s.x) || (ny != s.y)
+    val breed1 = if (moved) s.breedTimer + 1 else s.breedTimer
+    val currentIdx = s.y * cols + s.x
+    val newIdx = ny * cols + nx
+    
+    if (energy1 > 0) {
+      if (moved && breed1 >= s.sBreed) {
+        // Breed: new shark moves, old shark stays
+        (List(
+          Shark(nx, ny, s.sBreed, 0, energy1, s.color, s.width, s.height),
+          Shark(s.x, s.y, s.sBreed, 0, energy1, s.color, s.width, s.height)
+        ), Set(newIdx, currentIdx))
+      } else {
+        // Move without breeding  
+        (List(Shark(nx, ny, s.sBreed, breed1, energy1, s.color, s.width, s.height)), Set(newIdx))
+      }
+    } else {
+      // Dies from starvation
+      (List.empty, Set.empty)
+    }
+  }
+
   /** Génère les coordonnées des voisins en mode torus */
   private def neighbors(x: Int, y: Int): Seq[(Int, Int)] =
     for {
