@@ -1,0 +1,30 @@
+Wator
+Wator est une simulation de dynamique des populations avec deux types d'espèces: des requins et des thons. Ces espèces cohabitent dans le même environnement (dans notre cas, l'environnement représenterait l'océan). Les thons se reproduisent sans contrainte, pendant que les requins essaient de manger les thons.
+
+nTunas: le nombre de thons présents au départ dans l'environnement
+nSharks: le nombre de requins présents au départ dans l'environnement
+Chaque espèce possède son ensemble de paramètres:
+
+Pour chaque thon
+
+tBreed: le nombre de cycles avant qu'un thon puisse se reproduire
+Pour chaque requin
+
+sBreed: le nombre de cycles avant qu'un requin puisse se reproduire
+sEnergy: la barre d'énergie du requin, qui augmente quand il mange un poisson et diminue quand il n'en mange pas
+Les règles sont les suivantes pour chaque espèce:
+
+Pour chaque thon
+
+à chaque cycle, il se déplace de façon aléatoire dans une case voisine libre du voisinage de Moore.
+s'il n'y a pas de case libre, il ne bouge pas et il ne se reproduit pas.
+au bout de tBreed cycles, il se reproduit en donnant naissance à un nouveau thon dans la case qu'il occupait avant de se déplacer.
+
+Pour chaque requin
+
+à chaque cycle, il se déplace dans une case voisine occupée par un thon
+sinon, il se déplace dans une case voisine libre
+s'il mange un thon, il regagne un point de sEnergy
+s'il n'y a pas de case occupée par un thon ou de case libre, il ne bouge pas et il ne se reproduit pas.
+au bout de sBreed cycles, il se reproduit en donnant naissance à un nouveau requin dans la case qu'il occupait avant de se déplacer.
+s'il ne mange pas de thon au bout de sEnergy cycles, il meurt
