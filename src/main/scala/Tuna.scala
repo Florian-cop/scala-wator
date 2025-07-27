@@ -1,14 +1,13 @@
 package wator
 
 import scalafx.scene.paint.Color
-import scalafx.scene.shape.Rectangle
-import ujson.Bool
 
 final case class Tuna(
-    tBreed: Int,
-    val x: Int,
-    val y: Int,
-    val color: Color,
-    val width: Int,
-    val height: Int
+  override val x: Int,
+  override val y: Int,
+  tBreed: Int = 3,
+  breedTimer: Int = 0,
+  override val color: Color,
+  override val width: Int,
+  override val height: Int
 ) extends Fish(x, y, color, width, height)

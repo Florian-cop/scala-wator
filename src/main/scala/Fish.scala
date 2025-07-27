@@ -3,18 +3,18 @@ package wator
 import scalafx.scene.paint.Color
 import scalafx.scene.shape.Rectangle
 
-abstract class Fish(
-    val posX: Int,
-    val posY: Int,
-    val fishColor: Color,
-    val fishWidth: Int,
-    val fishHeight: Int
-) {
+sealed trait Fish {
+  def x: Int
+  def y: Int
+  def color: Color
+  def width: Int
+  def height: Int
+
   def draw(): Rectangle = new Rectangle {
-    x      = posX
-    y      = posY
-    width  = fishWidth
-    height = fishHeight
-    fill   = fishColor
+    translateX = Fish.this.x * Fish.this.width
+    translateY = Fish.this.y * Fish.this.height
+    this.width = Fish.this.width
+    this.height = Fish.this.height
+    fill = color
   }
 }
