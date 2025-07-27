@@ -24,16 +24,18 @@ object WatorApp extends JFXApp3 {
     val rows = screenHeight / cellSize
     val tunaCount = Constants.InitialTunaCount
     val sharkCount = Constants.InitialSharkCount
-    val state = ObjectProperty(GameState(generateLife(tunaCount, sharkCount, cols, rows, cellSize), cols, rows, cellSize))
+    val state = ObjectProperty(GameState.fromList(generateLife(tunaCount, sharkCount, cols, rows, cellSize), cols, rows, cellSize))
 
     val canvas = new Canvas(screenWidth, screenHeight)
     val gc: GraphicsContext = canvas.graphicsContext2D
     def render(): Unit = {
       gc.fill = White
       gc.fillRect(0, 0, screenWidth, screenHeight)
-      state.value.entities.foreach { fish =>
-        gc.fill = fish.color
-        gc.fillRect(fish.x * cellSize, fish.y * cellSize, cellSize, cellSize)
+      state.value.grid.zipWithIndex.foreach { case (cellOpt, idx) =>
+        cellOpt.foreach { fish =>
+          gc.fill = fish.color
+          gc.fillRect(fish.x * cellSize, fish.y * cellSize, cellSize, cellSize)
+        }
       }
     }
     render()
